@@ -73,6 +73,27 @@ export default function SinglePostPage() {
         }
     };
 
+    const handleLike = async (replyId: number) => {
+        try {
+            const result = await forumAPI.markHelpful(replyId);
+            // Optimistically update UI or refresh
+            setReplies(currentReplies => currentReplies.map(reply => {
+                if (reply.id === replyId) {
+                    const isNowLiked = result.action === 'added';
+                    return {
+                        ...reply,
+                        marked_helpful_by_user: isNowLiked,
+                        helpful_count: isNowLiked ? reply.helpful_count + 1 : reply.helpful_count - 1
+                    };
+                }
+                return reply;
+            }));
+        } catch (error) {
+            console.error('Failed to like reply:', error);
+            alert('Please log in to vote!');
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -105,16 +126,16 @@ export default function SinglePostPage() {
                     <div className="p-8">
                         <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
                             <span className="bg-electric-cyan-50 text-electric-cyan-700 px-3 py-1 rounded-full font-medium flex items-center gap-2">
-                                {post.category_icon} {post.category_name}
+                                {post?.category_icon} {post?.category_name}
                             </span>
-                            <span>• posted by {post.author}</span>
-                            <span>• {new Date(post.created_at).toLocaleDateString()}</span>
+                            <span>• posted by {post?.author}</span>
+                            <span>• {post?.created_at ? new Date(post.created_at).toLocaleDateString() : ''}</span>
                         </div>
 
-                        <h1 className="text-3xl font-bold text-space-blue-900 mb-6 lowercase">{post.title}</h1>
+                        <h1 className="text-3xl font-bold text-space-blue-900 mb-6 lowercase">{post?.title}</h1>
 
                         <div className="prose max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {post.content}
+                            {post?.content}
                         </div>
                     </div>
                 </div>
@@ -139,6 +160,20 @@ export default function SinglePostPage() {
                                 </div>
                                 <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                                     {reply.content}
+                                </div>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => handleLike(reply.id)}
+                                        className={`flex items-center gap-2 text-sm font-medium transition-colors ${reply.marked_helpful_by_user
+                                                ? 'text-red-500 hover:text-red-600'
+                                                : 'text-gray-400 hover:text-red-400'
+                                            }`}
+                                    >
+                                        <span className="text-lg">
+                                            {reply.marked_helpful_by_user ? '❤️' : '🤍'}
+                                        </span>
+                                        <span>{reply.helpful_count || 0}</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
