@@ -129,27 +129,29 @@ export default function ForumPage() {
                                     <div className="p-8 text-center text-gray-500">no discussions yet. be the first to post!</div>
                                 ) : (
                                     posts.map((post) => (
-                                        <div key={post.id} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer block">
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-electric-cyan-400 to-fusion-purple-500 text-white flex items-center justify-center font-bold">
-                                                    {(post.author || 'A')[0].toUpperCase()}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h3 className="text-lg font-semibold text-space-blue-900 mb-1 hover:text-electric-cyan-600">
-                                                        {post.title}
-                                                    </h3>
-                                                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                                                        <span className="text-electric-cyan-600 font-medium">{post.category_name}</span>
-                                                        <span>• posted by {post.author}</span>
-                                                        <span>• {new Date(post.created_at).toLocaleDateString()}</span>
+                                        <Link key={post.id} href={`/forum/post/${post.id}`}>
+                                            <div className="p-6 hover:bg-gray-50 transition-colors cursor-pointer block">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-electric-cyan-400 to-fusion-purple-500 text-white flex items-center justify-center font-bold">
+                                                        {(post.author || 'A')[0].toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-semibold text-space-blue-900 mb-1 hover:text-electric-cyan-600">
+                                                            {post.title}
+                                                        </h3>
+                                                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                            <span className="text-electric-cyan-600 font-medium">{post.category_name}</span>
+                                                            <span>• posted by {post.author}</span>
+                                                            <span>• {new Date(post.created_at).toLocaleDateString()}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-center min-w-[60px]">
+                                                        <div className="text-xl font-bold text-gray-700">{post.reply_count || 0}</div>
+                                                        <div className="text-xs text-gray-500">replies</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-center min-w-[60px]">
-                                                    <div className="text-xl font-bold text-gray-700">{post.reply_count || 0}</div>
-                                                    <div className="text-xs text-gray-500">replies</div>
-                                                </div>
                                             </div>
-                                        </div>
+                                        </Link>
                                     ))
                                 )}
                             </div>
