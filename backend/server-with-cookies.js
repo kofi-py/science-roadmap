@@ -14,12 +14,22 @@ const PORT = process.env.PORT || 5000;
 
 // Database connection
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'science_roadmap',
-  password: process.env.DB_PASSWORD || 'postgres',
-  port: process.env.DB_PORT || 5432,
+  connectionString: process.env.DATABASE_URL,
+  user: !process.env.DATABASE_URL ? (process.env.DB_USER || 'postgres') : undefined,
+  host: !process.env.DATABASE_URL ? (process.env.DB_HOST || 'localhost') : undefined,
+  database: !process.env.DATABASE_URL ? (process.env.DB_NAME || 'science_roadmap') : undefined,
+  password: !process.env.DATABASE_URL ? (process.env.DB_PASSWORD || 'postgres') : undefined,
+  port: !process.env.DATABASE_URL ? (process.env.DB_PORT || 5432) : undefined,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+});
+
+if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+  console.error('WARNING: DATABASE_URL is not set. The server will attempt to connect to localhost, which will fail on Render.');
+}
+
+// Root route to prevent 404 during deployment health checks
+app.get('/', (req, res) => {
+  res.json({ message: 'Science Roadmap API is active', version: '1.0.0' });
 });
 
 // Test database connection
