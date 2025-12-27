@@ -1,9 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const { Pool } = require('pg');
-const { v4: uuidv4 } = require('uuid');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
@@ -28,7 +25,35 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
+// Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts, please try again later.' }
+});
+
+const forumLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 30 forum posts/replies per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many forum interactions, please try again later.' }
+});
+
 // Middleware
+app.use(helmet()); // Basic security headers
+app.use(morgan('dev')); // Structured logging
+app.use(globalLimiter); // Apply global rate limit to all requests
 app.use(cors({
   origin: [
     'http://localhost:3000',
@@ -96,7 +121,7 @@ const optionalAuth = async (req, res, next) => {
 // ==================== AUTH ROUTES ====================
 
 // Login/Register route (creates or gets user and sets session cookie)
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { username, email } = req.body;
 
@@ -190,7 +215,7 @@ app.get('/api/categories', async (req, res) => {
 // Get all forum posts with pagination
 app.get('/api/forum/posts', optionalAuth, async (req, res) => {
   try {
-    const { category, page = 1, limit = 20 } = req.query;
+    const { category, page = 1, limit = 20, search } = req.query;
     const offset = (page - 1) * limit;
 
     let query = `
@@ -213,9 +238,20 @@ app.get('/api/forum/posts', optionalAuth, async (req, res) => {
     `;
 
     const params = [];
+    const conditions = [];
+
     if (category && category !== 'all') {
-      query += ' WHERE c.name = $1';
       params.push(category);
+      conditions.push(`c.name = $${params.length}`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(fp.title ILIKE $${params.length} OR fp.content ILIKE $${params.length})`);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
     }
 
     query += ' GROUP BY fp.id, u.username, u.id, c.name, c.icon';
@@ -226,13 +262,15 @@ app.get('/api/forum/posts', optionalAuth, async (req, res) => {
     const result = await pool.query(query, params);
 
     // Get total count
-    let countQuery = 'SELECT COUNT(*) FROM forum_posts fp';
-    const countParams = [];
-    if (category && category !== 'all') {
-      countQuery += ' LEFT JOIN categories c ON fp.category_id = c.id WHERE c.name = $1';
-      countParams.push(category);
+    let countQuery = `
+      SELECT COUNT(*) 
+      FROM forum_posts fp
+      LEFT JOIN categories c ON fp.category_id = c.id
+    `;
+    if (conditions.length > 0) {
+      countQuery += ' WHERE ' + conditions.join(' AND ');
     }
-    const countResult = await pool.query(countQuery, countParams);
+    const countResult = await pool.query(countQuery, params.slice(0, conditions.length));
     const totalPosts = parseInt(countResult.rows[0].count);
 
     res.json({
@@ -315,7 +353,7 @@ app.get('/api/forum/posts/:id', optionalAuth, async (req, res) => {
 });
 
 // Create new forum post (requires authentication)
-app.post('/api/forum/posts', requireAuth, async (req, res) => {
+app.post('/api/forum/posts', requireAuth, forumLimiter, async (req, res) => {
   try {
     const { title, content, categoryId } = req.body;
 
@@ -343,7 +381,7 @@ app.post('/api/forum/posts', requireAuth, async (req, res) => {
 });
 
 // Create reply to a post (requires authentication)
-app.post('/api/forum/posts/:id/replies', requireAuth, async (req, res) => {
+app.post('/api/forum/posts/:id/replies', requireAuth, forumLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;

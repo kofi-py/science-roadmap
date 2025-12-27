@@ -90,9 +90,9 @@ export const forumAPI = {
     return response.data;
   },
 
-  async getPosts(category: string = 'all', page: number = 1, limit: number = 20) {
+  async getPosts(category: string = 'all', page: number = 1, limit: number = 20, search?: string) {
     const response = await api.get('/api/forum/posts', {
-      params: { category, page, limit }
+      params: { category, page, limit, search }
     });
     return response.data;
   },

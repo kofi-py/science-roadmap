@@ -26,6 +26,7 @@ interface Post {
 export default function ForumPage() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -37,14 +38,18 @@ export default function ForumPage() {
     const [anonEmail, setAnonEmail] = useState('');
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        const delayDebounceFn = setTimeout(() => {
+            fetchData();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [postsData, categoriesData] = await Promise.all([
-                forumAPI.getPosts(),
+                forumAPI.getPosts(undefined, 1, 20, searchTerm),
                 forumAPI.getCategories()
             ]);
 
@@ -85,6 +90,18 @@ export default function ForumPage() {
                     <div>
                         <h1 className="text-4xl font-bold text-space-blue-900">community forum</h1>
                         <p className="text-gray-600 mt-2">connect with fellow science enthusiasts</p>
+                    </div>
+                    <div className="flex-1 max-w-md mx-4">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="search discussions..."
+                                className="w-full px-4 py-2 pl-10 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-electric-cyan-500 outline-none transition-all"
+                            />
+                            <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                        </div>
                     </div>
                     <button
                         onClick={() => setIsModalOpen(true)}
