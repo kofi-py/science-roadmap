@@ -78,9 +78,14 @@ app.use(cors({
       'http://localhost:3002',
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+
+    // Allow any vercel.app subdomain in production for easier deployment
+    const isVercel = origin && origin.endsWith('.vercel.app');
+
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || isVercel) {
       callback(null, true);
     } else {
+      console.warn(`Blocked by CORS: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
