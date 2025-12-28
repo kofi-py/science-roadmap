@@ -182,7 +182,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     }), {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       httpOnly: false, // Allow JavaScript to read this cookie
-      sameSite: 'lax'
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     });
 
     res.json({
@@ -206,8 +207,16 @@ app.post('/api/auth/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Logout failed' });
     }
-    res.clearCookie('science_roadmap_session');
-    res.clearCookie('user_info');
+    res.clearCookie('science_roadmap_session', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
+    res.clearCookie('user_info', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
     res.json({ success: true, message: 'Logged out successfully' });
   });
 });
